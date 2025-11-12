@@ -79,17 +79,31 @@ app.post('/api/dashboard-metrics', async (req, res) => {
       SELECT 
         (SELECT SUM(total) FROM venda WHERE DATE(data) = ?) as total_dia,
         (SELECT COUNT(*) FROM venda WHERE DATE(data) = ?) as count_dia,
-        (SELECT SUM(descontototal) FROM venda WHERE DATE(data) = ?) as desconto_dia,
         (SELECT SUM(total) FROM venda WHERE data >= ?) as total_mes,
-        (SELECT COUNT(*) FROM venda WHERE data >= ?) as count_mes,
-        (SELECT SUM(descontototal) FROM venda WHERE data >= ?) as desconto_mes
+        (SELECT COUNT(*) FROM venda WHERE data >= ?) as count_mes
+    `;
+
+    const pagamentosQuery = `
+      SELECT 
+        formapagamento AS forma_pagamento,
+        SUM(valorreal) AS total
+      FROM recpag
+      WHERE DATE(datapagamento) = ?
+      GROUP BY formapagamento
     `;
     
     console.log('Executing query for dashboard metrics...');
-    const [vendasResult] = await connection.execute(vendasQuery, [today, today, today, firstDayOfMonth, firstDayOfMonth, firstDayOfMonth]);
+    const [vendasResult] = await connection.execute(vendasQuery, [today, today, firstDayOfMonth, firstDayOfMonth]);
+    const [pagamentosResult] = await connection.execute(pagamentosQuery, [today]);
     console.log('Query result:', vendasResult);
 
     const vendas = vendasResult[0];
+
+    // Processa os resultados de pagamentos
+    const vendasPorPagamento = {};
+    pagamentosResult.forEach(p => {
+      vendasPorPagamento[p.forma_pagamento] = p.total;
+    });
 
     const metrics = {
       'Valor Vendas': {
@@ -104,18 +118,7 @@ app.post('/api/dashboard-metrics', async (req, res) => {
         Dia: vendas.count_dia || 0,
         Mês: vendas.count_mes || 0,
       },
-      'Desctos. Vendas': {
-        Dia: vendas.desconto_dia || 0,
-        Mês: vendas.desconto_mes || 0,
-      },
-      'Compras Efetuadas': {
-        Dia: 0,
-        Mês: 0,
-      },
-      'Desctos. Compras': {
-        Dia: 0,
-        Mês: 0,
-      },
+      'Vendas por Pagamento': vendasPorPagamento,
     };
 
     console.log('Sending metrics to frontend:', metrics);
@@ -128,9 +131,7 @@ app.post('/api/dashboard-metrics', async (req, res) => {
       'Valor Vendas': { Dia: 0, Mês: 0 },
       'Ticket Médio': { Dia: 0, Mês: 0 },
       'Quant. Atendimentos': { Dia: 0, Mês: 0 },
-      'Desctos. Vendas': { Dia: 0, Mês: 0 },
-      'Compras Efetuadas': { Dia: 0, Mês: 0 },
-      'Desctos. Compras': { Dia: 0, Mês: 0 },
+      'Vendas por Pagamento': {},
       error: err.message
     });
   } finally {

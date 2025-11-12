@@ -3,13 +3,12 @@ import axios from 'axios';
 import { DbContext } from './DbContext';
 
 function Card({ title, data }) {
-  const formatValue = (key, value) => {
-    if (typeof value === 'number') {
-      if (key.includes('Valor Vendas') || key.includes('Ticket') || key.includes('Desctos') || key.includes('Compras')) {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-      }
-      return value;
+  const formatValue = (value) => {
+    // Formata como moeda, exceto para o card de quantidade
+    if (typeof value === 'number' && title !== 'Quant. Atendimentos') {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     }
+    // Retorna o valor como está se não for um número ou se for do card de quantidade
     return value;
   };
 
@@ -22,7 +21,7 @@ function Card({ title, data }) {
         {Object.entries(data).map(([key, value]) => (
           <div className="card-row" key={key}>
             <span>{key}:</span>
-            <span>{formatValue(title, value)}</span>
+            <span>{formatValue(value)}</span>
           </div>
         ))}
       </div>
