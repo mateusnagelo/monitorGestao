@@ -1,35 +1,46 @@
 import { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import {
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  CircularProgress,
+  Box,
+  Alert
+} from '@mui/material';
 import { DbContext } from './DbContext';
 
-function Card({ title, data }) {
+function MetricCard({ title, data }) {
   const formatValue = (value) => {
-    // Formata como moeda, exceto para o card de quantidade
     if (typeof value === 'number' && title !== 'Quant. Atendimentos') {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     }
-    // Retorna o valor como está se não for um número ou se for do card de quantidade
     return value;
   };
 
   return (
-    <div className="card">
-      <div className="card-header">
-        {title}
-      </div>
-      <div className="card-body">
+    <Card sx={{ height: '100%', borderRadius: 2, boxShadow: 3 }}>
+      <CardContent>
+        <Typography variant="h6" component="div" gutterBottom>
+          {title}
+        </Typography>
         {Object.entries(data).map(([key, value]) => (
-          <div className="card-row" key={key}>
-            <span>{key}:</span>
-            <span>{formatValue(value)}</span>
-          </div>
+          <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {key}:
+            </Typography>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+              {formatValue(value)}
+            </Typography>
+          </Box>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function DashboardMetrics({ onNavigateToVendasDetalhes, isLoading }) {
+function DashboardMetrics({ isLoading }) {
   const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState('');
   const { dbConfig } = useContext(DbContext);
@@ -40,10 +51,10 @@ function DashboardMetrics({ onNavigateToVendasDetalhes, isLoading }) {
         return;
       }
 
-      setError(null);
-      setMetrics(null); // Limpa as métricas antigas, mostrando a mensagem de "carregando"
+      setError('');
+      setMetrics(null);
       try {
-        const response = await axios.post('http://localhost:3001/api/dashboard-metrics', dbConfig);
+        const response = await axios.post('/.netlify/functions/dashboard-metrics', dbConfig);
         setMetrics(response.data);
       } catch (error) {
         console.error('Erro ao buscar métricas do dashboard:', error);
@@ -55,37 +66,46 @@ function DashboardMetrics({ onNavigateToVendasDetalhes, isLoading }) {
   }, [dbConfig]);
 
   if (isLoading) {
-    return <div className="info-message" style={{ color: 'black' }}>Carregando configurações...</div>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!dbConfig) {
-    return <div className="info-message" style={{ color: 'black' }}>Por favor, clique no ícone de engrenagem ⚙️ para configurar a conexão com o banco de dados.</div>;
+    return (
+      <Alert severity="info" sx={{ mt: 2 }}>
+        Por favor, clique no ícone de engrenagem ⚙️ para configurar a conexão com o banco de dados.
+      </Alert>
+    );
   }
 
   if (error) {
-    return <p className="error" style={{ color: 'red', padding: '10px' }}>{error}</p>;
+    return (
+      <Alert severity="error" sx={{ mt: 2 }}>
+        {error}
+      </Alert>
+    );
   }
 
   if (!metrics) {
-    return <div className="info-message" style={{ color: 'black' }}>Carregando métricas...</div>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando métricas...</Typography>
+      </Box>
+    );
   }
 
   return (
-    <div className="dashboard">
-      <div className="cards-container">
-        {Object.entries(metrics).length > 0 ? (
-          Object.entries(metrics).map(([title, data]) => (
-            <Card 
-              key={title} 
-              title={title} 
-              data={data} 
-            />
-          ))
-        ) : (
-          <div className="info-message" style={{ color: 'black' }}>Nenhuma métrica para exibir.</div>
-        )}
-      </div>
-    </div>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+      {metrics && Object.entries(metrics).map(([title, data]) => (
+        <Box key={title} sx={{ flex: '1 1 300px', maxWidth: '350px' }}>
+          <MetricCard title={title} data={data} />
+        </Box>
+      ))}
+    </Box>
   );
 }
 

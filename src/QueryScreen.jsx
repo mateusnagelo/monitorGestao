@@ -1,105 +1,119 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import {
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert,
+  Box,
+  Typography,
+} from '@mui/material';
+import { DbContext } from './DbContext';
 
-function QueryScreen({ onBack }) {
-  const [query, setQuery] = useState('SHOW TABLES');
+function QueryScreen() {
+  const [query, setQuery] = useState('SELECT * FROM INFORMATION_SCHEMA.TABLES;');
   const [results, setResults] = useState(null);
-  const [error, setError] = useState(null);
-  const [configs, setConfigs] = useState(null);
-  const [selectedEnv, setSelectedEnv] = useState('cloud');
-
-  useEffect(() => {
-    const savedConfigs = localStorage.getItem('dbConfigs');
-    if (savedConfigs) {
-      try {
-        setConfigs(JSON.parse(savedConfigs));
-      } catch (e) {
-        setError("Falha ao carregar as configurações do banco de dados.");
-      }
-    } else {
-      setError("Nenhuma configuração de banco de dados encontrada. Por favor, configure primeiro.");
-    }
-  }, []);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { dbConfig } = useContext(DbContext);
 
   const executeQuery = async () => {
-    if (!configs) {
-      setError('As configurações do banco de dados não estão carregadas.');
+    if (!dbConfig) {
+      setError('A configuração do banco de dados não está carregada.');
       return;
     }
 
-    const dbConfig = configs[selectedEnv];
+    setLoading(true);
+    setError('');
+    setResults(null);
 
     try {
-      const response = await fetch('/api/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, dbConfig }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Erro ao executar a consulta');
-      }
-
-      const data = await response.json();
-      setResults(data);
-      setError(null);
+      const response = await axios.post('/.netlify/functions/query', { query, dbConfig });
+      setResults(response.data);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.error || err.message || 'Erro ao executar a consulta');
       setResults(null);
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (!dbConfig) {
+      setError("Nenhuma configuração de banco de dados encontrada. Por favor, configure primeiro na tela de configurações. ⚙️");
+    }
+  }, [dbConfig]);
+
   return (
-    <div className="query-screen">
-      <header className="app-header">
-        <h1>Executar Consulta SQL</h1>
-        <button onClick={onBack} className="back-button">Voltar</button>
-      </header>
-      <main>
-        <div className="form-group">
-          <label>Ambiente</label>
-          <select value={selectedEnv} onChange={e => setSelectedEnv(e.target.value)}>
-            <option value="cloud">Nuvem</option>
-            <option value="local">Local</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Consulta SQL</label>
-          <textarea
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            rows="5"
-          />
-        </div>
-        <button onClick={executeQuery}>Executar</button>
-        {error && <div className="test-result error">{error}</div>}
-        {results && (
-          <div className="results-section">
-            <h2>Resultados</h2>
-            {results.length > 0 ? (
-              <table>
-                <thead>
-                  <tr>
-                    {Object.keys(results[0]).map(key => <th key={key}>{key}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((row, index) => (
-                    <tr key={index}>
-                      {Object.values(row).map((value, i) => (
-                        <td key={i}>{value && value.type === 'Buffer' ? '[Buffer]' : (typeof value === 'object' && value !== null ? JSON.stringify(value) : value)}</td>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Executar Consulta SQL
+      </Typography>
+      <TextField
+        label="Consulta SQL"
+        multiline
+        rows={6}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        variant="outlined"
+        fullWidth
+        margin="normal"
+        disabled={!dbConfig || loading}
+      />
+      <Button
+        onClick={executeQuery}
+        variant="contained"
+        disabled={!dbConfig || loading}
+        startIcon={loading ? <CircularProgress size={20} /> : null}
+      >
+        {loading ? 'Executando...' : 'Executar'}
+      </Button>
+
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+
+      {results && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6">Resultados</Typography>
+          {results.length > 0 ? (
+            <Box sx={{ overflowX: 'auto' }}>
+              <TableContainer component={Paper} sx={{ mt: 2 }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      {Object.keys(results[0]).map((key) => (
+                        <TableCell key={key} sx={{ fontWeight: 'bold' }}>{key}</TableCell>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>Nenhum resultado encontrado.</p>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {results.map((row, index) => (
+                      <TableRow key={index}>
+                        {Object.values(row).map((value, i) => (
+                          <TableCell key={i}>
+                            {value && value.type === 'Buffer'
+                              ? '[Buffer]'
+                              : (typeof value === 'object' && value !== null ? JSON.stringify(value) : value)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ) : (
+            <Alert severity="info" sx={{ mt: 2 }}>Nenhum resultado encontrado.</Alert>
+          )}
+        </Box>
+      )}
+    </Box>
   );
 }
 
