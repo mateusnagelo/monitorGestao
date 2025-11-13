@@ -32,3 +32,6 @@ server.cjs
 *.njsproj
 *.sln
 *.sw?
+
+# Local Netlify folder
+.netlify

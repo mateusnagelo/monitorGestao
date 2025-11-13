@@ -10,6 +10,7 @@ import {
   Paper,
   BottomNavigation,
   BottomNavigationAction,
+  Link,
 } from '@mui/material';
 import { Settings, Assessment, Home } from '@mui/icons-material';
 import DashboardMetrics from './DashboardMetrics';
@@ -118,7 +119,9 @@ function App() {
         >
           <Container maxWidth="sm">
             <Typography variant="body2" color="text.secondary" align="center">
-              vr 1.0.0 - Desenvolvido por VisionApp by Mateus Angelo
+              <Link color="inherit" href="https://github.com/mateusnagelo" target="_blank" rel="noopener">
+                vr 1.0.0 - Desenvolvido por VisionApp by Mateus Angelo
+              </Link>
             </Typography>
           </Container>
         </Box>

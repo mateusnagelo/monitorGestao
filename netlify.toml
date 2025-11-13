@@ -6,3 +6,6 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["!node_modules/.pnpm/**"]
+
+[dev]
+  command = "npm run dev"

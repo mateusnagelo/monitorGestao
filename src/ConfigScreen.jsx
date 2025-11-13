@@ -72,7 +72,7 @@ function ConfigScreen({ onSave }) {
     setLoadingTest(true);
     setTestResult(null);
     try {
-      const response = await axios.post('/.netlify/functions/test-connection', { dbConfig: config });
+      const response = await axios.post('/.netlify/functions/test-connection');
       setTestResult(response.data);
     } catch (error) {
       setTestResult({ success: false, message: `Erro: ${error.response?.data?.message || error.message}` });
