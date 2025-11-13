@@ -13,9 +13,9 @@ import {
   Link,
 } from '@mui/material';
 import { Settings, Assessment, Home } from '@mui/icons-material';
-import DashboardMetrics from './DashboardMetrics';
-import ConfigScreen from './ConfigScreen';
-import QueryScreen from './QueryScreen';
+import DashboardMetrics from './DashboardMetrics.tsx';
+import ConfigScreen from './ConfigScreen.tsx';
+import QueryScreen from './QueryScreen.tsx';
 import { DbContext } from './DbContext';
 import { useIsMobile } from './useIsMobile';
 
